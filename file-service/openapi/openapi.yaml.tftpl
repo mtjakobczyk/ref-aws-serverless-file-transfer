@@ -1,0 +1,86 @@
+openapi: "3.0.0"
+info:
+  title: File Transfer Service
+  description: File Transfer Service
+  version: "1.0"
+paths:
+  /clients/{clientPartition}/orders/{orderIdentifier}:
+    description: File Transfer Order
+    post:
+      summary: Submit order for file transfer
+      parameters:
+        - name: clientPartition
+          description: Client-specific Transfer Partition
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: orderIdentifier
+          description: File Transfer Order Client-side Identifier
+          in: path
+          required: true
+          schema:
+            type: string     
+      requestBody:
+        description: File to be transferred
+        required: false
+        content:
+          text/*:
+            schema:
+              $ref: "#/components/schemas/Binary"
+          application/*:
+            schema:
+              $ref: "#/components/schemas/Binary"
+          image/*:
+            schema:
+              $ref: "#/components/schemas/Binary"
+      responses:
+        "202":
+          description: File accepted for transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetails"
+        "400":
+          description: Bad request
+        "404":
+          description: Client Partition does not exist
+      x-amazon-apigateway-integration:
+        type: "aws"
+        credentials: "arn:aws:iam::$${AWS::AccountId}:role/${api_iam_role_name}"
+        httpMethod: "PUT"
+        uri: "arn:aws:apigateway:$${AWS::Region}:s3:path/${file_ingestion_bucket_name}/{objectKeyPrefix}/{objectKeyBusinessKey}/{objectKey}"
+        requestParameters:
+          integration.request.path.objectKeyPrefix: "method.request.path.clientPartition"
+          integration.request.path.objectKeyBusinessKey: "method.request.path.orderIdentifier"
+          integration.request.path.objectKey: "context.requestId"
+        passthroughBehavior: "when_no_match"
+        contentHandling: "CONVERT_TO_BINARY"
+        responses:
+          "200":
+            statusCode: "202"
+            responseTemplates:
+              application/json: "#set($inputRoot = $input.path('$'))\n{\n  \"orderIdentifier\": \"$method.request.path.orderIdentifier\"\n  \"orderReference\": \"$context.requestId\" \n}"
+x-amazon-apigateway-binary-media-types:
+  - "text/*"
+  - "application/*"
+  - "image/*"
+components:
+  schemas:
+    Binary:
+      title: "Binary Schema"
+      type: "string"
+      format: "binary"
+    Empty:
+      title: "Empty Schema"
+      type: "object"
+    OrderDetails:
+      title: "File Transfer Order Schema"
+      type: "object"
+      properties:
+        orderIdentifier:
+          type: string
+          description: File Transfer Order Client-side Identifier
+        orderReference:
+          type: string
+          description: File transfer order reference
