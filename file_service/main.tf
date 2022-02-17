@@ -52,6 +52,8 @@ resource "aws_api_gateway_rest_api" "file_ingestion" {
   body = templatefile("${path.module}/openapi/openapi.yaml.tftpl", { api_iam_role_name = "${aws_iam_role.file_ingestion.name}", file_ingestion_bucket_name = "${aws_s3_bucket.file_ingestion.id}" })
   name = "file-transfer-service"
 
+  policy = var.file_ingestion_api_resource_policy
+
   endpoint_configuration {
     types = ["PRIVATE"]
     vpc_endpoint_ids = var.file_ingestion_connected_vpc_endpoints_ids
