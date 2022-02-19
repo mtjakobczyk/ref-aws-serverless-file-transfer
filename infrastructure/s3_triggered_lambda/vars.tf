@@ -1,4 +1,4 @@
-# lambda module - vars.tf
+# s3_triggered_lambda module - vars.tf
 
 ## Module Input Variables
 variable "system_name" {}
@@ -11,3 +11,6 @@ variable "execution_role_name" {}
 variable "handler" {}
 variable "timeout" {}
 variable "memory_size" {}
+
+variable "s3_bucket_event_source_arn" {}
+variable "s3_bucket_event_source_id" {}

@@ -32,30 +32,32 @@ locals {
   client_one = {
     system_name = "${random_string.demo_prefix.result}-clientOne"
     client_partition = "one"
-    aws_account_id = ""
+    aws_account_id = data.aws_caller_identity.current.account_id
     file_transfer_requester_role_name = "${lower(random_string.demo_prefix.result)}-clientOne-file-transfer-requester"
   }
 }
 
-# module "client_one" {
-#   source = "./client_system"
-#   client_system_resource_prefix = "${local.client_one["system_name"]}"
-#   staging_bucket_name = "${lower(local.client_one["system_name"])}-staging"
-#   file_transfer_requester_role_name = "${local.client_one["file_transfer_requester_role_name"]}"
-#   client_system_vpc_cidr = "192.168.0.0/16"
-#   client_system_subnet_cidrs = [ "192.168.1.0/24", "192.168.2.0/24", "192.168.3.0/24" ]
-# }
+module "client_one" {
+  source = "./client_system"
+  client_system_resource_prefix = "${local.client_one["system_name"]}"
+  staging_bucket_name = "${lower(local.client_one["system_name"])}-staging"
+  file_transfer_requester_role_name = "${local.client_one["file_transfer_requester_role_name"]}"
+  client_system_vpc_cidr = "192.168.0.0/16"
+  client_system_subnet_cidrs = [ "192.168.1.0/24", "192.168.2.0/24", "192.168.3.0/24" ]
+}
 
 module "client_one_file_transfer_requester" {
-  source = "./lambda"
+  source = "./s3_triggered_lambda"
   system_name = "${local.client_one["system_name"]}"
   codebase_bucket_name = "${lower(local.client_one["system_name"])}-codebase"
-  codebase_package_path = "${path.root}/../applications/fileTransferRequester/target/file-transfer-requester-1.0-SNAPSHOT-jar-with-dependencies.jar"
-  codebase_package_name = "file-transfer-requester-1.0-SNAPSHOT-jar-with-dependencies.jar"
+  codebase_package_path = "${path.root}/../applications/fileTransferRequester/target/file-transfer-requester-1.0-SNAPSHOT.jar"
+  codebase_package_name = "file-transfer-requester-1.0-SNAPSHOT.jar"
   runtime = "java11" # Amazon Corretto 11
   function_name = "${lower(local.client_one["system_name"])}-file-transfer-requester"
   execution_role_name = "${lower(local.client_one["system_name"])}-file-transfer-requester"
   handler = "io.github.mtjakobczyk.references.aws.serverless.FileTransferRequester::handleRequest"
   timeout = "3" # seconds
   memory_size = "128" # MBs
+  s3_bucket_event_source_arn = module.client_one.staging_bucket_arn
+  s3_bucket_event_source_id = module.client_one.staging_bucket_id
 }

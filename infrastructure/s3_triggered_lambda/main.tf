@@ -1,3 +1,4 @@
+# s3_triggered_lambda module - main.tf
 
 resource "aws_s3_bucket" "codebase" {
   bucket = var.codebase_bucket_name
@@ -27,6 +28,25 @@ resource "aws_s3_object" "code_package" {
   etag = filemd5(var.codebase_package_path) # Triggers updates when the value changes
 }
 
+resource "aws_lambda_permission" "allow_bucket" {
+  statement_id  = "AllowExecutionFromS3Bucket"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.this.arn
+  principal     = "s3.amazonaws.com"
+  source_arn    = var.s3_bucket_event_source_arn
+}
+
+resource "aws_s3_bucket_notification" "bucket_notification" {
+  bucket = var.s3_bucket_event_source_id
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.this.arn
+    events              = ["s3:ObjectCreated:*"]
+    filter_prefix       = "in/"
+    filter_suffix       = ".txt"
+  }
+  depends_on = [aws_lambda_permission.allow_bucket]
+}
+
 resource "aws_lambda_function" "this" {
   function_name = var.function_name
   role = aws_iam_role.this.arn
@@ -40,13 +60,18 @@ resource "aws_lambda_function" "this" {
   memory_size = var.memory_size
 
   source_code_hash = filebase64sha256(var.codebase_package_path) # Triggers updates when the value changes
+
+  # environment {
+  #   variables = {
+  #     foo = "bar"
+  #   }
+  # }
 }
 
-# resource "aws_cloudwatch_log_group" "hello_world" {
-#   name = "/aws/lambda/${aws_lambda_function.hello_world.function_name}"
-
-#   retention_in_days = 30
-# }
+resource "aws_cloudwatch_log_group" "this" {
+  name = "/aws/lambda/${aws_lambda_function.this.function_name}"
+  retention_in_days = 7
+}
 
 resource "aws_iam_role" "this" {
   name = "serverless_lambda"
