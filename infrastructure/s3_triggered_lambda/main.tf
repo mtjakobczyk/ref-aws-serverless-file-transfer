@@ -49,7 +49,7 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
 
 resource "aws_lambda_function" "this" {
   function_name = var.function_name
-  role = aws_iam_role.this.arn
+  role = var.execution_role_arn
 
   s3_bucket = aws_s3_bucket.codebase.id
   s3_key    = aws_s3_object.code_package.key
@@ -61,11 +61,9 @@ resource "aws_lambda_function" "this" {
 
   source_code_hash = filebase64sha256(var.codebase_package_path) # Triggers updates when the value changes
 
-  # environment {
-  #   variables = {
-  #     foo = "bar"
-  #   }
-  # }
+  environment {
+    variables = var.function_environment_variables
+  }
 }
 
 resource "aws_cloudwatch_log_group" "this" {
@@ -73,24 +71,3 @@ resource "aws_cloudwatch_log_group" "this" {
   retention_in_days = 7
 }
 
-resource "aws_iam_role" "this" {
-  name = "serverless_lambda"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Sid    = ""
-      Principal = {
-        Service = "lambda.amazonaws.com"
-      }
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "this" {
-  role       = aws_iam_role.this.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}

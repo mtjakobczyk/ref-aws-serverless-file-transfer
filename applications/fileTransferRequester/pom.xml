@@ -38,6 +38,11 @@
       <artifactId>aws-lambda-java-log4j2</artifactId>
       <version>1.5.1</version>
     </dependency>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-dynamodb</artifactId>
+      <version>1.12.162</version>
+    </dependency>
     <!-- https://maven.apache.org/enforcer/enforcer-rules/versionRanges.html -->
     <!-- [2.17.1,) to avoid CVE-2021-44832 -->
     <!-- <dependency>

@@ -55,9 +55,9 @@ resource "aws_vpc_endpoint" "file_transfer_service" {
 resource "aws_dynamodb_table" "file_transfers" {
   name           = "${var.client_system_resource_prefix}-requested-file-transfers"
   billing_mode     = "PAY_PER_REQUEST"
-  hash_key       = "fileTransferId"
+  hash_key       = "fileProcessingId"
   attribute {
-    name = "fileTransferId"
+    name = "fileProcessingId"
     type = "S"
   }
   tags = {
@@ -107,6 +107,17 @@ data "aws_iam_policy_document" "file_transfer_requester" {
     ]
     resources = [
       "${aws_dynamodb_table.file_transfers.arn}",
+    ]
+  }
+  statement {
+    sid = "AWSLambdaBasicExecutionRole"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+    ]
+    resources = [
+      "*",
     ]
   }
 }

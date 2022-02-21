@@ -49,15 +49,27 @@ module "client_one" {
 module "client_one_file_transfer_requester" {
   source = "./s3_triggered_lambda"
   system_name = "${local.client_one["system_name"]}"
+  function_name = "${lower(local.client_one["system_name"])}-file-transfer-requester"
+
+  # Codebase
   codebase_bucket_name = "${lower(local.client_one["system_name"])}-codebase"
   codebase_package_path = "${path.root}/../applications/fileTransferRequester/target/file-transfer-requester-1.0-SNAPSHOT.jar"
   codebase_package_name = "file-transfer-requester-1.0-SNAPSHOT.jar"
+
+  # Runtime
   runtime = "java11" # Amazon Corretto 11
-  function_name = "${lower(local.client_one["system_name"])}-file-transfer-requester"
-  execution_role_name = "${lower(local.client_one["system_name"])}-file-transfer-requester"
   handler = "io.github.mtjakobczyk.references.aws.serverless.FileTransferRequester::handleRequest"
-  timeout = "3" # seconds
-  memory_size = "128" # MBs
+  execution_role_arn = module.client_one.execution_role_arn
+  timeout = "120" # seconds
+  memory_size = "512" # MBs
+  
+  # Event Source
   s3_bucket_event_source_arn = module.client_one.staging_bucket_arn
   s3_bucket_event_source_id = module.client_one.staging_bucket_id
+  
+  # Function's Environment Variables
+  function_environment_variables = {
+    FILE_TRANSFERS_TABLE = module.client_one.dynamodb_table_file_transfers_name
+  }
+  
 }
