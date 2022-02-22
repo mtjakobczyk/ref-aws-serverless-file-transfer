@@ -1,0 +1,9 @@
+{
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.test.config": {
+    "name": "customvars",
+    "preLaunchTask": "set-env-file",
+    "envFile": "${workspaceFolder}/.env"
+  },
+  "java.test.defaultConfig": "customvars"
+}

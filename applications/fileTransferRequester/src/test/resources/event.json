@@ -1,0 +1,22 @@
+{
+    "Records": [
+        {
+            "awsRegion": "eu-west-1",
+            "eventName": "ObjectCreated:Put",
+            "eventSource": "aws:s3",
+            "eventTime": "1970-01-01T00:00:00.000Z",
+            "eventVersion": "2.0",
+            "s3": {
+                "bucket": {
+                    "name": "bvz53ccr-clientone-staging",
+                    "arn": "arn:aws:s3:::bvz53ccr-clientone-staging"
+                },
+                "object": {
+                    "key": "in/mocked.txt",
+                    "size": 1024,
+                    "versionId": ""
+                }
+            }
+        }
+    ]
+  }
