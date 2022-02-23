@@ -14,6 +14,7 @@ import com.amazonaws.services.lambda.runtime.events.S3Event;
 import com.amazonaws.services.lambda.runtime.tests.annotations.Event;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.mockito.Mock;
@@ -41,6 +42,7 @@ public class FileTransferRequesterTests {
     
     when(context.getAwsRequestId()).thenReturn(mockedRequestId.toString());
   }
+  @Disabled("Disabled")
   @ParameterizedTest
   @Event(value = "event.json", type = S3Event.class)
   public void testInjectS3Event(S3Event event) {
