@@ -40,9 +40,9 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
   bucket = var.s3_bucket_event_source_id
   lambda_function {
     lambda_function_arn = aws_lambda_function.this.arn
-    events              = ["s3:ObjectCreated:*"]
-    filter_prefix       = "in/"
-    filter_suffix       = ".txt"
+    events              = var.s3_object_events
+    filter_prefix       = var.s3_object_prefix_filter
+    filter_suffix       = var.s3_object_prefix_suffix
   }
   depends_on = [aws_lambda_permission.allow_bucket]
 }
@@ -60,6 +60,11 @@ resource "aws_lambda_function" "this" {
   memory_size = var.memory_size
 
   source_code_hash = filebase64sha256(var.codebase_package_path) # Triggers updates when the value changes
+
+  vpc_config {
+    subnet_ids         = var.vpc_subnets
+    security_group_ids = var.vpc_security_groups
+  }
 
   environment {
     variables = var.function_environment_variables

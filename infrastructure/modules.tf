@@ -62,10 +62,15 @@ module "client_one_file_transfer_requester" {
   execution_role_arn = module.client_one.execution_role_arn
   timeout = "120" # seconds
   memory_size = "512" # MBs
+
+  vpc_subnets = module.client_one.vpc_subnets
+  vpc_security_groups = module.client_one.vpc_security_groups
   
   # Event Source
   s3_bucket_event_source_arn = module.client_one.staging_bucket_arn
   s3_bucket_event_source_id = module.client_one.staging_bucket_id
+  s3_object_prefix_filter = "in/"
+  s3_object_prefix_suffix = ".txt"
   
   # Function's Environment Variables
   function_environment_variables = {

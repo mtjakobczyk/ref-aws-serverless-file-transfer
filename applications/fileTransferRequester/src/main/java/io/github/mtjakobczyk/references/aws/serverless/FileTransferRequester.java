@@ -17,6 +17,8 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.S3Event;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -24,6 +26,7 @@ public class FileTransferRequester implements RequestHandler<S3Event, String>{
   private enum RecordFileTransferEventType { PUT, UPDATE };
   private Gson gson = new GsonBuilder().setPrettyPrinting().create();
   private Table fileTransfersTable;
+  private AmazonS3 s3;
   private LambdaLogger logger;
   private String fileProcessingId;
   @Override
@@ -32,13 +35,16 @@ public class FileTransferRequester implements RequestHandler<S3Event, String>{
       initializeFields(event, context);
 
       var s3Event = event.getRecords().get(0).getS3();
-  
+      String bucketName = s3Event.getBucket().getName();
+      String objectKey = s3Event.getObject().getUrlDecodedKey();
+      String newObjectKey = "sent/"+objectKey.replaceFirst("^in/", "");
+
       recordFileTransferEvent(
         RecordFileTransferEventType.PUT,
         fileProcessingId, 
         Map.ofEntries(
           entry("startOfProcessing", LocalDateTime.now().toString()), // ISO-8601 Format
-          entry("filename", s3Event.getObject().getUrlDecodedKey()),
+          entry("filename", objectKey),
           entry("fileSizeBytes", s3Event.getObject().getSizeAsLong()),
           entry("fileVersion", s3Event.getObject().getVersionId())
         )
@@ -47,6 +53,9 @@ public class FileTransferRequester implements RequestHandler<S3Event, String>{
       // TODO Read File and Call API Gateway
 
       var fileTransferId = UUID.randomUUID().toString();
+
+      getAmazonS3().copyObject(bucketName, objectKey, bucketName, newObjectKey);
+      getAmazonS3().deleteObject(bucketName, objectKey);
 
       recordFileTransferEvent(
         RecordFileTransferEventType.UPDATE,
@@ -69,14 +78,19 @@ public class FileTransferRequester implements RequestHandler<S3Event, String>{
     fileProcessingId = context.getAwsRequestId();
     logger.log("EVENT " + fileProcessingId + " " + gson.toJson(event));
     
+    // Environment Variables
     var fileTransfersTableName = getEnvironmentVariable("FILE_TRANSFERS_TABLE");
     if(fileTransfersTableName == null || fileTransfersTableName.isEmpty()) {
       throw new IllegalArgumentException("FILE_TRANSFERS_TABLE environment variables is not set");
     }
-    
+
+    // AWS DynamoDB
     var client = AmazonDynamoDBClientBuilder.standard().build();
     DynamoDB dynamoDB = new DynamoDB(client);
     fileTransfersTable = dynamoDB.getTable(fileTransfersTableName);
+
+    // AWS S3
+    s3 = AmazonS3ClientBuilder.standard().build();
   }
 
   private void recordFileTransferEvent(RecordFileTransferEventType type, String fileProcessingId, Map<String, Object> attributes) {
@@ -112,4 +126,8 @@ public class FileTransferRequester implements RequestHandler<S3Event, String>{
   protected String getEnvironmentVariable(String name) {
     return System.getenv(name);
   }
+  protected AmazonS3 getAmazonS3() {
+    return this.s3;
+  }
+
 }

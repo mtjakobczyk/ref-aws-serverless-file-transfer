@@ -22,6 +22,20 @@ resource "aws_subnet" "file_transfer_requester" {
   }
 }
 
+resource "aws_security_group" "file_transfer_requester" {
+  vpc_id      = aws_vpc.file_transfer_requester.id
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = {
+    Name = "${var.client_system_resource_prefix}-requester-sg"
+    SystemName = "${var.client_system_resource_prefix}"
+  }
+}
+
 resource "aws_security_group" "file_transfer_service" {
   vpc_id      = aws_vpc.file_transfer_requester.id
   ingress {
@@ -32,9 +46,39 @@ resource "aws_security_group" "file_transfer_service" {
     cidr_blocks      = [ aws_vpc.file_transfer_requester.cidr_block ]
   }
   tags = {
-    Name = "${var.client_system_resource_prefix}-sg"
+    Name = "${var.client_system_resource_prefix}-service-sg"
     SystemName = "${var.client_system_resource_prefix}"
   }
+}
+
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id       = aws_vpc.file_transfer_requester.id
+  service_name = "com.amazonaws.${data.aws_region.current.name}.s3"
+}
+
+resource "aws_vpc_endpoint_route_table_association" "s3" {
+  route_table_id  = aws_vpc.file_transfer_requester.default_route_table_id
+  vpc_endpoint_id = aws_vpc_endpoint.s3.id
+}
+
+resource "aws_vpc_endpoint" "cloudwatch" {
+  vpc_id       = aws_vpc.file_transfer_requester.id
+  vpc_endpoint_type = "Interface"
+  service_name = "com.amazonaws.${data.aws_region.current.name}.logs"
+  subnet_ids        =   aws_subnet.file_transfer_requester[*].id
+  security_group_ids =  [
+    aws_security_group.file_transfer_service.id
+  ]
+}
+
+resource "aws_vpc_endpoint" "dynamodb" {
+  vpc_id       = aws_vpc.file_transfer_requester.id
+  service_name = "com.amazonaws.${data.aws_region.current.name}.dynamodb"
+}
+
+resource "aws_vpc_endpoint_route_table_association" "dynamodb" {
+  route_table_id  = aws_vpc.file_transfer_requester.default_route_table_id
+  vpc_endpoint_id = aws_vpc_endpoint.dynamodb.id
 }
 
 resource "aws_vpc_endpoint" "file_transfer_service" {
@@ -45,6 +89,7 @@ resource "aws_vpc_endpoint" "file_transfer_service" {
   security_group_ids =  [
     aws_security_group.file_transfer_service.id
   ]
+  # private_dns_enabled = true
   # tags = {
   #   Name = "${var.client_system_resource_prefix}-vpcendpoint"
   # }
@@ -94,6 +139,9 @@ data "aws_iam_policy_document" "file_transfer_requester" {
   statement {
     actions = [
       "s3:GetObject",
+      "s3:CopyObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
     ]
     resources = [
       "${aws_s3_bucket.staging.arn}/*",
@@ -115,6 +163,19 @@ data "aws_iam_policy_document" "file_transfer_requester" {
       "logs:CreateLogGroup",
       "logs:CreateLogStream",
       "logs:PutLogEvents",
+    ]
+    resources = [
+      "*",
+    ]
+  }
+  statement {
+    actions = [
+      "ec2:CreateNetworkInterface",
+      "ec2:DescribeNetworkInterfaces",
+      "ec2:DeleteNetworkInterface",
+      "ec2:DescribeSecurityGroups",
+      "ec2:DescribeSubnets",
+      "ec2:DescribeVpcs",
     ]
     resources = [
       "*",
