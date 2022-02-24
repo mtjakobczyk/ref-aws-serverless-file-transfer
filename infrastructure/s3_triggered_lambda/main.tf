@@ -25,7 +25,7 @@ resource "aws_s3_object" "code_package" {
   bucket = aws_s3_bucket.codebase.id
   key    = var.codebase_package_name
   source = var.codebase_package_path
-  etag = filemd5(var.codebase_package_path) # Triggers updates when the value changes
+  source_hash = filemd5(var.codebase_package_path) # Triggers updates when the value changes
 }
 
 resource "aws_lambda_permission" "allow_bucket" {
