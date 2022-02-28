@@ -5,7 +5,6 @@ import static java.util.Map.entry;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.UUID;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
@@ -19,16 +18,24 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.S3Event;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+
+import kong.unirest.Unirest;
 
 public class FileTransferRequester implements RequestHandler<S3Event, String>{
   private enum RecordFileTransferEventType { PUT, UPDATE };
   private Gson gson = new GsonBuilder().setPrettyPrinting().create();
+  // private FileTransferServiceClient fts;
   private Table fileTransfersTable;
   private AmazonS3 s3;
   private LambdaLogger logger;
   private String fileProcessingId;
+  private String apiEndpoint;
+  private String apiBasepath;
+  private String apiVPCEEndpoint;
   @Override
   public String handleRequest(S3Event event, Context context) {
     try {
@@ -37,7 +44,8 @@ public class FileTransferRequester implements RequestHandler<S3Event, String>{
       var s3Event = event.getRecords().get(0).getS3();
       String bucketName = s3Event.getBucket().getName();
       String objectKey = s3Event.getObject().getUrlDecodedKey();
-      String newObjectKey = "sent/"+objectKey.replaceFirst("^in/", "");
+      String objectFilename = objectKey.replaceFirst("^in/", "");
+      String newObjectKey = "sent/"+objectFilename;
 
       recordFileTransferEvent(
         RecordFileTransferEventType.PUT,
@@ -50,10 +58,28 @@ public class FileTransferRequester implements RequestHandler<S3Event, String>{
         )
       );
 
-      // TODO Read File and Call API Gateway
+      S3Object o = s3.getObject(bucketName, objectKey);
+      var oContentType = o.getObjectMetadata().getContentType();
+      S3ObjectInputStream s3is = o.getObjectContent();
 
-      var fileTransferId = UUID.randomUUID().toString();
+      String clientPartition = "one";
 
+      String url = "https://"+apiVPCEEndpoint+"/"+apiBasepath+"/clients/"+clientPartition+"/orders/"+objectFilename;
+      logger.log("DEBUG " + fileProcessingId + " URL " + url);
+      logger.log("DEBUG " + fileProcessingId + " Host Header " + apiEndpoint);
+  
+      var res = Unirest.post(url)
+       .header("Content-Type", oContentType)
+       .header("Host", apiEndpoint)
+       .body(s3is)
+       .asString();
+      
+      logger.log("DEBUG " + fileProcessingId + " STATUS " + res.getStatus());
+      logger.log("DEBUG " + fileProcessingId + " STATUS TEXT " + res.getStatusText());
+      logger.log("DEBUG " + fileProcessingId + " BODY " + res.getBody());
+
+      s3is.close();
+    
       getAmazonS3().copyObject(bucketName, objectKey, bucketName, newObjectKey);
       getAmazonS3().deleteObject(bucketName, objectKey);
 
@@ -62,7 +88,7 @@ public class FileTransferRequester implements RequestHandler<S3Event, String>{
         fileProcessingId, 
         Map.ofEntries(
           entry("endOfProcessing", LocalDateTime.now().toString()), // ISO-8601 Format
-          entry("fileTransferId", fileTransferId)
+          entry("fileTransferId", "")
         )
       );
 
@@ -79,10 +105,11 @@ public class FileTransferRequester implements RequestHandler<S3Event, String>{
     logger.log("EVENT " + fileProcessingId + " " + gson.toJson(event));
     
     // Environment Variables
+    apiEndpoint = getEnvironmentVariable("FILE_TRANSFER_API_INVOKE_URL");
+    apiBasepath = getEnvironmentVariable("FILE_TRANSFER_API_BASEPATH");
+    apiVPCEEndpoint = getEnvironmentVariable("FILE_TRANSFER_API_VPCE_HOSTNAME");
+    logger.log("DEBUG " + fileProcessingId + " API " + apiEndpoint);
     var fileTransfersTableName = getEnvironmentVariable("FILE_TRANSFERS_TABLE");
-    if(fileTransfersTableName == null || fileTransfersTableName.isEmpty()) {
-      throw new IllegalArgumentException("FILE_TRANSFERS_TABLE environment variables is not set");
-    }
 
     // AWS DynamoDB
     var client = AmazonDynamoDBClientBuilder.standard().build();
@@ -124,7 +151,11 @@ public class FileTransferRequester implements RequestHandler<S3Event, String>{
   }
 
   protected String getEnvironmentVariable(String name) {
-    return System.getenv(name);
+    var ev = System.getenv(name);
+    if(ev == null || ev.isEmpty()) {
+      throw new IllegalArgumentException(name+" environment variables is not set");
+    }
+    return ev;
   }
   protected AmazonS3 getAmazonS3() {
     return this.s3;

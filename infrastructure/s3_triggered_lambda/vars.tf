@@ -15,7 +15,7 @@ variable "memory_size" {}
 variable "s3_bucket_event_source_arn" {}
 variable "s3_bucket_event_source_id" {}
 variable "s3_object_prefix_filter" {}
-variable "s3_object_prefix_suffix" {}
+# variable "s3_object_prefix_suffix" {}
 variable "s3_object_events" {
   type=list(string)
   default = [ "s3:ObjectCreated:*" ]

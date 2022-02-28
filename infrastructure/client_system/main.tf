@@ -5,6 +5,8 @@ data "aws_availability_zones" "azs" {}
 ##### Networking
 resource "aws_vpc" "file_transfer_requester" {
   cidr_block = var.client_system_vpc_cidr
+  enable_dns_hostnames = true
+  enable_dns_support = true
   tags = {
     Name = "${var.client_system_resource_prefix}-vpc"
     SystemName = "${var.client_system_resource_prefix}"
@@ -44,6 +46,12 @@ resource "aws_security_group" "file_transfer_service" {
     to_port          = 443
     protocol         = "tcp"
     cidr_blocks      = [ aws_vpc.file_transfer_requester.cidr_block ]
+  }
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
   }
   tags = {
     Name = "${var.client_system_resource_prefix}-service-sg"
@@ -89,7 +97,7 @@ resource "aws_vpc_endpoint" "file_transfer_service" {
   security_group_ids =  [
     aws_security_group.file_transfer_service.id
   ]
-  # private_dns_enabled = true
+  private_dns_enabled = true
   # tags = {
   #   Name = "${var.client_system_resource_prefix}-vpcendpoint"
   # }

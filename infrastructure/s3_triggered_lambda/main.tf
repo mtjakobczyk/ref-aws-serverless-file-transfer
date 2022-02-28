@@ -42,7 +42,7 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
     lambda_function_arn = aws_lambda_function.this.arn
     events              = var.s3_object_events
     filter_prefix       = var.s3_object_prefix_filter
-    filter_suffix       = var.s3_object_prefix_suffix
+    # filter_suffix       = var.s3_object_prefix_suffix
   }
   depends_on = [aws_lambda_permission.allow_bucket]
 }

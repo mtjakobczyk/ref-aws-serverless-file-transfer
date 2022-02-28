@@ -43,6 +43,11 @@
       <artifactId>aws-java-sdk-dynamodb</artifactId>
       <version>1.12.162</version>
     </dependency>
+    <dependency>
+      <groupId>com.konghq</groupId>
+      <artifactId>unirest-java</artifactId>
+      <version>3.13.6</version>
+    </dependency>
     <!-- https://maven.apache.org/enforcer/enforcer-rules/versionRanges.html -->
     <!-- [2.17.1,) to avoid CVE-2021-44832 -->
     <!-- <dependency>
