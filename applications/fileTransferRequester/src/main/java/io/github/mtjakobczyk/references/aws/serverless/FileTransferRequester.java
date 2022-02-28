@@ -28,7 +28,6 @@ import kong.unirest.Unirest;
 public class FileTransferRequester implements RequestHandler<S3Event, String>{
   private enum RecordFileTransferEventType { PUT, UPDATE };
   private Gson gson = new GsonBuilder().setPrettyPrinting().create();
-  // private FileTransferServiceClient fts;
   private Table fileTransfersTable;
   private AmazonS3 s3;
   private LambdaLogger logger;
@@ -36,6 +35,9 @@ public class FileTransferRequester implements RequestHandler<S3Event, String>{
   private String apiEndpoint;
   private String apiBasepath;
   private String apiVPCEEndpoint;
+  private String clientPartition;
+  private String s3FolderAccepted;
+  private String s3FolderRejected;
   @Override
   public String handleRequest(S3Event event, Context context) {
     try {
@@ -45,7 +47,6 @@ public class FileTransferRequester implements RequestHandler<S3Event, String>{
       String bucketName = s3Event.getBucket().getName();
       String objectKey = s3Event.getObject().getUrlDecodedKey();
       String objectFilename = objectKey.replaceFirst("^in/", "");
-      String newObjectKey = "sent/"+objectFilename;
 
       recordFileTransferEvent(
         RecordFileTransferEventType.PUT,
@@ -62,8 +63,6 @@ public class FileTransferRequester implements RequestHandler<S3Event, String>{
       var oContentType = o.getObjectMetadata().getContentType();
       S3ObjectInputStream s3is = o.getObjectContent();
 
-      String clientPartition = "one";
-
       String url = "https://"+apiVPCEEndpoint+"/"+apiBasepath+"/clients/"+clientPartition+"/orders/"+objectFilename;
       logger.log("DEBUG " + fileProcessingId + " URL " + url);
       logger.log("DEBUG " + fileProcessingId + " Host Header " + apiEndpoint);
@@ -79,8 +78,8 @@ public class FileTransferRequester implements RequestHandler<S3Event, String>{
       logger.log("DEBUG " + fileProcessingId + " BODY " + res.getBody());
 
       s3is.close();
-    
-      getAmazonS3().copyObject(bucketName, objectKey, bucketName, newObjectKey);
+
+      getAmazonS3().copyObject(bucketName, objectKey, bucketName, ((res.getStatus()==202) ? s3FolderAccepted : s3FolderRejected ) +"/"+objectFilename);
       getAmazonS3().deleteObject(bucketName, objectKey);
 
       recordFileTransferEvent(
@@ -105,6 +104,9 @@ public class FileTransferRequester implements RequestHandler<S3Event, String>{
     logger.log("EVENT " + fileProcessingId + " " + gson.toJson(event));
     
     // Environment Variables
+    clientPartition = getEnvironmentVariable("CLIENT_PARTITION");
+    s3FolderAccepted = getEnvironmentVariable("S3_FOLDER_ACCEPTED");
+    s3FolderRejected = getEnvironmentVariable("S3_FOLDER_REJECTED");
     apiEndpoint = getEnvironmentVariable("FILE_TRANSFER_API_INVOKE_URL");
     apiBasepath = getEnvironmentVariable("FILE_TRANSFER_API_BASEPATH");
     apiVPCEEndpoint = getEnvironmentVariable("FILE_TRANSFER_API_VPCE_HOSTNAME");

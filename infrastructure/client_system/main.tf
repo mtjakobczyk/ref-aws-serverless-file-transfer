@@ -103,7 +103,6 @@ resource "aws_vpc_endpoint" "file_transfer_service" {
   # }
 }
 
-
 ##### Datastore 
 resource "aws_dynamodb_table" "file_transfers" {
   name           = "${var.client_system_resource_prefix}-requested-file-transfers"

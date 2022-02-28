@@ -68,11 +68,9 @@ resource "aws_api_gateway_rest_api" "file_ingestion" {
 
   endpoint_configuration {
     types = ["PRIVATE"]
-    vpc_endpoint_ids = var.file_ingestion_connected_vpc_endpoints_ids
+    vpc_endpoint_ids = var.client_data.*.vpc_endpoint
   }
 }
-
-output "file_ingestion_api" { value = "${aws_api_gateway_rest_api.file_ingestion.id}" }
 
 resource "aws_api_gateway_deployment" "file_ingestion" {
   rest_api_id = aws_api_gateway_rest_api.file_ingestion.id
@@ -100,6 +98,7 @@ resource "aws_api_gateway_rest_api_policy" "file_ingestion" {
   policy = data.aws_iam_policy_document.file_ingestion_resource_policy.json
 }
 
+# https://github.com/awsdocs/amazon-api-gateway-developer-guide/blob/main/doc_source/api-gateway-control-access-using-iam-policies-to-invoke-api.md
 data "aws_iam_policy_document" "file_ingestion_resource_policy" {
   dynamic "statement" {
     for_each = var.client_data
@@ -110,13 +109,12 @@ data "aws_iam_policy_document" "file_ingestion_resource_policy" {
         identifiers = [ "*" ]
       }
       actions   = ["execute-api:Invoke"]
-      resources = [ "execute-api:/*" ]
-#      resources = ["arn:aws:execute-api:${statement.value["region"]}:${statement.value["aws_account_id"]}:${aws_api_gateway_rest_api.file_ingestion.id}:/v1/POST/clients/${statement.value["client_partition"]}/*"]
-      # condition {
-      #   test     = "StringEquals"
-      #   variable = "aws:SourceVpce"
-      #   values = [ statement.value["vpc_endpoint"] ]
-      # }
+      resources = ["arn:aws:execute-api:${statement.value["region"]}:${statement.value["aws_account_id"]}:${aws_api_gateway_rest_api.file_ingestion.id}/v1/POST/clients/${statement.value["client_partition"]}/*"]
+      condition {
+        test     = "StringEquals"
+        variable = "aws:SourceVpce"
+        values = [ statement.value["vpc_endpoint"] ]
+      }
     }
   }
 }
