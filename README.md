@@ -4,7 +4,7 @@ This is a minimalistic application used to demonstrate an AWS-based implementati
 ## Architecture
 ![Architecture](./docs/architecture.svg)
 
-When a new `.pdf` file is uploaded to the `in/` folder in the `Staging` Bucket, the **File Transfer Requester** Lambda function gets triggered.
+When a new file is uploaded to the `in/` folder in the `Staging` Bucket, the **File Transfer Requester** Lambda function gets triggered.
 
 In this way, for each new file, the **File Transfer Requester** Lambda function performs these steps:
 1. Generate **File Processing UUID**
@@ -18,7 +18,7 @@ In this way, for each new file, the **File Transfer Requester** Lambda function 
 1. **Step 1.2** Read file contents
 1. **Step 1.3** Upload the file (HTTP POST) to the file service
     - The service immediately returns a **File Transfer UUID**
-1. **Step 1.4** Move file to the `sent/` folder
+1. **Step 1.4** Move file to the `accepted/` folder
     - Use `CopyObject` and `DeleteObject` AWS S3 APIs
 1. **Step 1.5** Update the Item in DynamoDB Table: 
     - Use the **File Processing UUID** as the item's primary key (`fileProcessingId`)
@@ -26,6 +26,7 @@ In this way, for each new file, the **File Transfer Requester** Lambda function 
         - **File Transfer UUID** (`fileTransferId`)
         - End of Processing Timestamp (`endOfProcessing`)
 
+If at any stage the file processing fails, the file is moved to the `rejected` folder
+
 ## Security by Design
 ![Architecture](./docs/architecture-with-security.svg)
-
