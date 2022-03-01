@@ -140,6 +140,12 @@ resource "aws_s3_bucket_public_access_block" "staging" {
   ignore_public_acls = true
 }
 
+resource "aws_s3_object" "staging_folder_in" {
+  bucket = aws_s3_bucket.staging.id
+  key    = "in/"
+  content_type = "application/x-directory"
+}
+
 
 ##### IAM Role
 data "aws_iam_policy_document" "file_transfer_requester" {

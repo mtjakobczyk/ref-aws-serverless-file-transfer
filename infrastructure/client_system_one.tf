@@ -1,22 +1,5 @@
 
-module "file_service" {
-  source = "./file_service"
-  file_ingestion_bucket_name = "${random_string.demo_prefix.result}-file-ingestion"
-  file_ingestion_role_name = "${random_string.demo_prefix.result}-file-ingestion-role"
-
-  client_data = local.registered_clients
-}
-
-locals {
-  registered_clients = [
-    {
-      client_partition = "one"
-      aws_account_id = data.aws_caller_identity.current.account_id
-      region = "eu-west-1"
-      vpc_endpoint = module.client_one.client_vpc_endpoints
-    }
-  ]
-}
+#### Client One Parameters
 locals {
   client_one = {
     system_name = "${random_string.demo_prefix.result}-clientOne"
@@ -26,6 +9,7 @@ locals {
   }
 }
 
+#### Client Infrastructure (Staging S3, VPC, Endpoints, DynamoDB)
 module "client_one" {
   source = "./client_system"
   client_system_resource_prefix = "${local.client_one["system_name"]}"
@@ -35,6 +19,7 @@ module "client_one" {
   client_system_subnet_cidrs = [ "192.168.1.0/24", "192.168.2.0/24", "192.168.3.0/24" ]
 }
 
+#### Client Infrastructure (Lambda)
 module "client_one_file_transfer_requester" {
   source = "./s3_triggered_lambda"
   system_name = "${local.client_one["system_name"]}"
@@ -66,9 +51,10 @@ module "client_one_file_transfer_requester" {
     FILE_TRANSFER_API_INVOKE_URL = module.file_service.file_ingestion_api_dns_name
     FILE_TRANSFER_API_VPCE_HOSTNAME = module.client_one.vpce_dns_entries[0].dns_name
     FILE_TRANSFER_API_BASEPATH = "v1"
-    CLIENT_PARTITION = "one"
+    CLIENT_PARTITION = "${local.client_one["client_partition"]}"
     S3_FOLDER_ACCEPTED = "accepted"
     S3_FOLDER_REJECTED = "rejected"
   }
-  
 }
+
+output "vpce_dns_entry" { value = module.client_one.vpce_dns_entries[0].dns_name }

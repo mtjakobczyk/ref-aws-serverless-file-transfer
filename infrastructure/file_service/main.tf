@@ -68,7 +68,7 @@ resource "aws_api_gateway_rest_api" "file_ingestion" {
 
   endpoint_configuration {
     types = ["PRIVATE"]
-    vpc_endpoint_ids = var.client_data.*.vpc_endpoint
+    vpc_endpoint_ids = (length(var.client_data)>0) ? var.client_data[*].vpc_endpoint : null
   }
 }
 
@@ -76,10 +76,10 @@ resource "aws_api_gateway_deployment" "file_ingestion" {
   rest_api_id = aws_api_gateway_rest_api.file_ingestion.id
 
   triggers = {
-    redeployment = join("",[
+    redeployment = sha1(join("",[
       sha1(templatefile("${path.module}/openapi/openapi.yaml.tftpl", { api_iam_role_name = "${aws_iam_role.file_ingestion.name}", file_ingestion_bucket_name = "${aws_s3_bucket.file_ingestion.id}" })),
-      sha1(data.aws_iam_policy_document.file_ingestion_resource_policy.json)
-    ])
+      sha1((length(var.client_data)>0) ? data.aws_iam_policy_document.file_ingestion_resource_policy.json : data.aws_iam_policy_document.default_deny_all.json)
+    ]))
   }
 
   lifecycle {
@@ -95,7 +95,7 @@ resource "aws_api_gateway_stage" "file_ingestion" {
 
 resource "aws_api_gateway_rest_api_policy" "file_ingestion" {
   rest_api_id = aws_api_gateway_rest_api.file_ingestion.id
-  policy = data.aws_iam_policy_document.file_ingestion_resource_policy.json
+  policy = (length(var.client_data)>0) ? data.aws_iam_policy_document.file_ingestion_resource_policy.json : data.aws_iam_policy_document.default_deny_all.json
 }
 
 # https://github.com/awsdocs/amazon-api-gateway-developer-guide/blob/main/doc_source/api-gateway-control-access-using-iam-policies-to-invoke-api.md
@@ -109,12 +109,24 @@ data "aws_iam_policy_document" "file_ingestion_resource_policy" {
         identifiers = [ "*" ]
       }
       actions   = ["execute-api:Invoke"]
-      resources = ["arn:aws:execute-api:${statement.value["region"]}:${statement.value["aws_account_id"]}:${aws_api_gateway_rest_api.file_ingestion.id}/v1/POST/clients/${statement.value["client_partition"]}/*"]
+      resources = ["arn:aws:execute-api:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.file_ingestion.id}/v1/POST/clients/${statement.value["client_partition"]}/*"]
       condition {
         test     = "StringEquals"
         variable = "aws:SourceVpce"
         values = [ statement.value["vpc_endpoint"] ]
       }
     }
+  }
+}
+
+data "aws_iam_policy_document" "default_deny_all" {
+  statement {
+    effect = "Deny"
+    principals {
+      type        = "*"
+      identifiers = [ "*" ]
+    }
+    actions   = ["execute-api:Invoke"]
+    resources = ["arn:aws:execute-api:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.file_ingestion.id}/*"]
   }
 }

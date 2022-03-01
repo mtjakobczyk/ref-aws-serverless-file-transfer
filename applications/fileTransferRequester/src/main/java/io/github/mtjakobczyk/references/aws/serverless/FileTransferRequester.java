@@ -69,7 +69,7 @@ public class FileTransferRequester implements RequestHandler<S3Event, String>{
   
       var res = Unirest.post(url)
        .header("Content-Type", oContentType)
-       .header("Host", apiEndpoint)
+       .header("Host", apiEndpoint) // https://www.rfc-editor.org/rfc/rfc7230#section-5.4
        .body(s3is)
        .asString();
       
