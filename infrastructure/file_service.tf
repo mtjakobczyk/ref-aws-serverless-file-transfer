@@ -9,10 +9,10 @@ module "file_service" {
 
 locals {
   registered_clients = [
-    {
-      client_partition = "one"
-      vpc_endpoint = module.client_one.client_vpc_endpoints
-    }
+    # {
+    #   client_partition = "one"
+    #   vpc_endpoint = module.client_one.client_vpc_endpoints
+    # }
   ]
 }
 

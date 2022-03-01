@@ -85,6 +85,10 @@ resource "aws_api_gateway_deployment" "file_ingestion" {
   lifecycle {
     create_before_destroy = true
   }
+
+  depends_on = [
+    aws_api_gateway_rest_api_policy.file_ingestion,
+  ]
 }
 
 resource "aws_api_gateway_stage" "file_ingestion" {
