@@ -1,5 +1,43 @@
 # Reference application (AWS) - transferring files over private REST API using serverless functions
-This is a minimalistic application used to demonstrate an AWS-based implementation of a serverless function calling a private REST API hosted on AWS API Gateway using fine-grained authorisation.
+This is a minimalistic application used to demonstrate an AWS-based implementation of a serverless function calling a private REST API hosted on AWS API Gateway using fine-grained Resource Policy.
+
+## Scenario
+- One or more **client systems**, optionally scattered across different AWS cloud accounts, can send files to a **shared service** using synchronous HTTP requests.
+- The **shared service** exposes a REST API that is accessible only by the designated **client systems** from their private subnets over a secure network within AWS Cloud.
+
+## API
+- Client systems send `HTTP POST` requests with files as binary payload of request bodies.
+- Each client can successfully send files to one, client-dedicated "client partition" only.
+ 
+```yaml
+# Part of infrastructure/file_service/openapi/openapi.yaml.tftpl
+paths:
+  /clients/{clientPartition}/orders/{orderIdentifier}:
+    description: File Transfer Order
+    post:
+      summary: Submit order for file transfer
+      parameters:
+        - name: clientPartition
+          description: Client-specific Transfer Partition
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: orderIdentifier
+          description: File Transfer Order Client-side Identifier
+          in: path
+          required: true
+          schema:
+            type: string     
+      requestBody:
+        description: File to be transferred
+        required: false
+        content:
+          image/*:
+            schema:
+              $ref: "#/components/schemas/Binary"
+```
+![Architecture](./docs/architecture-api-concept.svg)
 
 ## Architecture
 ![Architecture](./docs/architecture.svg)
@@ -72,11 +110,11 @@ As soon as the Terraform run completes, you can perform a first test, which will
 - After a few seconds, the file should be moved to the `rejected/` folder in the same bucket
 
 If you look into CloudWatch, you will see entries saying:
-> STATUS 403
->
-> STATUS TEXT Forbidden 
->
-> BODY User: anonymous is not authorized to perform: execute-api:Invoke on resource (...)/v1/POST/clients/one/orders/(...) **with explicit deny**
+```
+STATUS 403
+STATUS TEXT Forbidden 
+BODY User: anonymous is not authorized to perform: execute-api:Invoke on resource (...)/v1/POST/clients/one/orders/(...) with explicit deny
+```
 
 #### 2.3 Registering a new client
 In the `infrastructure/file_service.tf` **uncomment** the entry for the newly added client (in the `local.registered client` list):
@@ -101,9 +139,10 @@ Now, just apply changes.
 - Furthermore, you should a copy of the same file in the `one/*/` subfolder of the `...-file-ingestion` bucket. The API Gateway placed there the copy.
 
 This time, if you look into CloudWatch, you will see entries saying:
-> STATUS 202
->
-> STATUS TEXT Accepted 
+```
+STATUS 202
+STATUS TEXT Accepted 
+```
 
 #### 2.5 Test 2 (failing)
 In the `infrastructure/client_system_one.tf` file, change the `client_partition` to `two`:
@@ -127,14 +166,14 @@ Apply changes:
 - You will *not* find any copy of the file in the `two/*/` subfolder of the `...-file-ingestion` bucket
 
 Furthermore, if you look into CloudWatch, you will see entries saying:
-> STATUS 403
->
-> STATUS TEXT Forbidden 
->
-> BODY User: anonymous is not authorized to perform: execute-api:Invoke on resource (...)/v1/POST/clients/**two**/orders/(...)
+```
+STATUS 403
+STATUS TEXT Forbidden 
+BODY User: anonymous is not authorized to perform: execute-api:Invoke on resource (...)/v1/POST/clients/**two**/orders/(...)
+```
 
 #### Postscriptum
-If you need to let other clients use their dedicated paths (`/clients/three/*` or `/clients/pizza/*`), you just add the relevant object to the list (as shown below) and apply Terraform changes (which will amend the IAM resource policy and allow the VPC Endpoint access the private endpoint of API Gateway):
+If you need to let other clients use their dedicated paths (`/clients/two/*` or `/clients/three/*`), you just add the relevant object to the list (as shown below) and apply Terraform changes (which will amend the IAM resource policy and allow the VPC Endpoint access the private endpoint of API Gateway):
 ```yaml
 locals {
   registered_clients = [
@@ -143,11 +182,11 @@ locals {
       vpc_endpoint = "vpce-123456-efg"
     },
     {
-      client_partition = "three"
+      client_partition = "two"
       vpc_endpoint = "vpce-789012-ihk"
     },
     {
-      client_partition = "pizza"
+      client_partition = "three"
       vpc_endpoint = "vpce-556677-zxc"
     }
   ]
