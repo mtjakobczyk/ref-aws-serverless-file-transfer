@@ -9,3 +9,4 @@ output "vpc_security_groups" { value = [ aws_security_group.file_transfer_reques
 output "vpc_subnets" { value = aws_subnet.file_transfer_requester[*].id }
 
 output "vpce_dns_entries" { value = "${aws_vpc_endpoint.file_transfer_service.dns_entry}" }
+output "vpce_id" { value = "${aws_vpc_endpoint.file_transfer_service.id}" }

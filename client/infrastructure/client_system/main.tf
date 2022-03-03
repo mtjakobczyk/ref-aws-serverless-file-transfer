@@ -7,10 +7,6 @@ resource "aws_vpc" "file_transfer_requester" {
   cidr_block = var.client_system_vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support = true
-  tags = {
-    Name = "${var.client_system_resource_prefix}-vpc"
-    SystemName = "${var.client_system_resource_prefix}"
-  }
 }
 
 resource "aws_subnet" "file_transfer_requester" {
@@ -18,10 +14,6 @@ resource "aws_subnet" "file_transfer_requester" {
   vpc_id     = aws_vpc.file_transfer_requester.id
   cidr_block = var.client_system_subnet_cidrs[count.index] 
   availability_zone = "${data.aws_availability_zones.azs.names[count.index % 3]}"
-  tags = {
-    Name = "${var.client_system_resource_prefix}-subnet-${count.index}"
-    SystemName = "${var.client_system_resource_prefix}"
-  }
 }
 
 resource "aws_security_group" "file_transfer_requester" {
@@ -31,10 +23,6 @@ resource "aws_security_group" "file_transfer_requester" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
-  }
-  tags = {
-    Name = "${var.client_system_resource_prefix}-requester-sg"
-    SystemName = "${var.client_system_resource_prefix}"
   }
 }
 
@@ -52,10 +40,6 @@ resource "aws_security_group" "file_transfer_service" {
     to_port          = 0
     protocol         = "-1"
     cidr_blocks      = ["0.0.0.0/0"]
-  }
-  tags = {
-    Name = "${var.client_system_resource_prefix}-service-sg"
-    SystemName = "${var.client_system_resource_prefix}"
   }
 }
 
@@ -98,9 +82,6 @@ resource "aws_vpc_endpoint" "file_transfer_service" {
     aws_security_group.file_transfer_service.id
   ]
   private_dns_enabled = true
-  # tags = {
-  #   Name = "${var.client_system_resource_prefix}-vpcendpoint"
-  # }
 }
 
 ##### Datastore 
@@ -112,18 +93,12 @@ resource "aws_dynamodb_table" "file_transfers" {
     name = "fileProcessingId"
     type = "S"
   }
-  tags = {
-    SystemName = "${var.client_system_resource_prefix}"
-  }
 }
 
 
 ##### Staging Bucket
 resource "aws_s3_bucket" "staging" {
   bucket = var.staging_bucket_name
-  tags = {
-    SystemName = "${var.client_system_resource_prefix}"
-  }
 }
 
 resource "aws_s3_bucket_acl" "staging" {
@@ -142,7 +117,19 @@ resource "aws_s3_bucket_public_access_block" "staging" {
 
 resource "aws_s3_object" "staging_folder_in" {
   bucket = aws_s3_bucket.staging.id
-  key    = "in/"
+  key    = "${var.s3_folder_in}/"
+  content_type = "application/x-directory"
+}
+
+resource "aws_s3_object" "staging_folder_accepted" {
+  bucket = aws_s3_bucket.staging.id
+  key    = "${var.s3_folder_accepted}/"
+  content_type = "application/x-directory"
+}
+
+resource "aws_s3_object" "staging_folder_rejected" {
+  bucket = aws_s3_bucket.staging.id
+  key    = "${var.s3_folder_rejected}/"
   content_type = "application/x-directory"
 }
 

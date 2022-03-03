@@ -9,3 +9,6 @@ variable "client_system_subnet_cidrs" {
   type=list(string)
   default = []
 }
+variable "s3_folder_in" {}
+variable "s3_folder_accepted" {}
+variable "s3_folder_rejected" {}
