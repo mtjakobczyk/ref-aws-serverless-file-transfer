@@ -1,9 +1,7 @@
 terraform {
   required_version = ">= 1.1.5"
 
-  backend "s3" {
-    region = "eu-west-1"
-  }
+  backend "s3" { }
 
   required_providers {
     # https://registry.terraform.io/providers/hashicorp/aws/latest
@@ -21,9 +19,10 @@ terraform {
 }
 
 provider "aws" {
-  region = "eu-west-1"
-
   default_tags {
-    tags = local.default_tags
+    tags = {
+      "ref:aws:environment" = "demo"
+      "ref:aws:scenario"    = "ref-aws-serverless-file-transfer"
+    }
   }
 }
