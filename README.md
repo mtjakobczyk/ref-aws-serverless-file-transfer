@@ -1,12 +1,12 @@
-# Reference application (AWS) - transferring files over private REST API using serverless functions
-This is a minimalistic application used to demonstrate an AWS-based implementation of a serverless function calling a private REST API hosted on AWS API Gateway using fine-grained Resource Policy.
+# Reference application (AWS) - calling private REST API using serverless functions
+This is a cloud-native application used to demonstrate an AWS-based implementation of a serverless function calling a private REST API hosted on AWS API Gateway using fine-grained IAM Resource Policy.
 
 ## Scenario
-- One or more **client systems**, optionally scattered across different AWS cloud accounts, can send files to a **shared service** using synchronous HTTP requests.
-- The **shared service** exposes a REST API that is accessible only by the designated **client systems** from their private subnets over a secure network within AWS Cloud.
+- One or more **client applications**, optionally scattered across different AWS cloud accounts, can submit files to a **shared service** using synchronous HTTP requests.
+- The **shared service** exposes a REST API that is accessible only by the designated **client applications** from their private subnets over a secure network within AWS Cloud.
 
 ## API
-- Client systems send `HTTP POST` requests with files as binary payload of request bodies.
+- Each client application sends `HTTP POST` request with a file as binary payload in the request body.
 - Each client can successfully send files to one, client-dedicated "client partition" only.
  
 ```yaml
