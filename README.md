@@ -72,7 +72,7 @@ If at any stage the file processing fails, the file is moved to the `rejected` f
 ## Demo
 This repository ships a full-working solution.
 
-The code is split into two separate "projects":
+The code is split into two separate and independently-deployed "projects":
 1. Service
     ```
       service
@@ -95,15 +95,16 @@ The code is split into two separate "projects":
       │       └── src/main/java/io/github/mtjakobczyk/references/aws/serverless/FileTransferRequester.java
       └── infrastructure
           ├── client_system
-          │   ├── main.tf
-          │   ├── outputs.tf
-          │   └── vars.tf
-          ├── client_system_one.tf
+          │   ├── main.tf
+          │   ├── outputs.tf
+          │   └── vars.tf
           ├── context.tf
+          ├── main.tf
           ├── s3_triggered_lambda
-          │   ├── main.tf
-          │   └── vars.tf
-          └── terraform.tf
+          │   ├── main.tf
+          │   └── vars.tf
+          ├── terraform.tf
+          └── vars.tf
     ```
 
 Before you deploy anything, you need to consider where you would like to store the **Terraform State**.
