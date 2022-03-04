@@ -260,6 +260,7 @@ Plan: 1 to add, 3 to change, 1 to destroy.
 ```
 
 If you want, you can look at the REST API in AWS Console. The Resource Policy has been updated and the VPC Endpoint ID is connected to the Private Endpoint.
+
 ![Console VPC Endpoint ID](./docs/api-gateway-vpce-id.png)
 
 ![Console VPC Endpoint ID](./docs/resource-policy.png)
