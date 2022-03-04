@@ -1,5 +1,5 @@
 # Reference application (AWS) - calling private REST API using serverless functions
-This is a cloud-native application used to demonstrate an AWS-based implementation of a serverless function calling a private REST API hosted on AWS API Gateway using fine-grained IAM Resource Policy.
+This is a cloud-native application used to demonstrate an AWS-based implementation of a serverless function calling a private REST API hosted on AWS API Gateway. The service call is done from within a private subnet over VPC endpoint and using fine-grained access control using IAM Resource Policy.
 
 ## Scenario
 - One or more **client applications**, optionally scattered across different AWS cloud accounts, can submit files to a **shared service** using synchronous HTTP requests.
